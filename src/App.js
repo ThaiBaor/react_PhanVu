@@ -10,6 +10,7 @@ import {
 } from 'antd';
 import Home from './pages/Home';
 import SalesQuoteList from './pages/SalesQuoteList';
+import CreateSalesOrder from './pages/CreateSalesOrder';
 import { Link, Routes, Route } from 'react-router-dom';
 const { Header, Content, Footer, Sider } = Layout;
 const items = [
@@ -94,7 +95,8 @@ const App = () => {
 				<Content style={{ margin: '0 16px' }}>
 					<Routes>
 						<Route path='/' element={<Home />} />
-						<Route path='/SalesQuoteList' element={<SalesQuoteList />} />
+						<Route path='/SalesQuoteList' element={<SalesQuoteList />}/>				
+						<Route path='/SalesQuoteList/CreateSalesOrder' element={<CreateSalesOrder />} />
 					</Routes>
 				</Content>
 				<Footer style={{ textAlign: 'center' }}>

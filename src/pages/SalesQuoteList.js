@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 import dayjs from "dayjs";
 import {
@@ -8,7 +9,7 @@ import {
 	SearchOutlined
 } from '@ant-design/icons';
 import {
-	Breadcrumb,
+	notification,
 	Select,
 	Input,
 	Col,
@@ -23,71 +24,125 @@ import {
 	theme
 } from 'antd';
 import { formatDate } from '../utils/format';
+import { Link } from 'react-router-dom';
 const { Title } = Typography;
 const { Option } = Select;
 const { Search } = Input;
-const contextMenuItems = [{
-	label: (
-		<a href="https://www.antgroup.com" target="_blank" rel="noopener noreferrer">
-			Create Purchase Contract
-		</a>
-	),
-	key: '0',
-},
-{
-	label: (
-		<a href="https://www.aliyun.com" target="_blank" rel="noopener noreferrer">
-			Create Sales Order
-		</a>
-	),
-	key: '1',
-}];
-const salesQuoteColumns = [
-	{
-		title: '', dataIndex: '0', render: () =>
-			<Dropdown
-				menu={{ items: contextMenuItems }}
-				trigger={['click']}>
-				<EllipsisOutlined />
-			</Dropdown>
-	},
-	{ title: 'Dự án', dataIndex: 'ProjectID' },
-	{ title: 'SQ ID', dataIndex: 'SalesQuoteID' },
-	{ title: 'SO ID', dataIndex: 'SalesOrderID' },
-	{ title: 'Contract ID', dataIndex: 'ContractID' },
-	{ title: 'Tên', dataIndex: 'SalesQuoteName' },
-	{ title: 'Trạng thái', dataIndex: 'LifeCycleStatusCodeText' },
-	{ title: 'Sales Unit', dataIndex: 'SalesUnitID' },
-	{ title: 'Employee', dataIndex: 'EmployeeResponsibleName' },
-	{ title: 'Start Date', dataIndex: 'RequestedStartDate' },
-	{ title: 'End Date', dataIndex: 'RequestedEndDate' },
-	{ title: 'Create Date', dataIndex: 'CreationDateTime' },
-];
+
 const SalesQuoteList = () => {
 	const {
 		token: { colorBgContainer, borderRadiusLG },
 	} = theme.useToken();
-	const projects = useSelector((state) => state.projects.projects);
-	const [salesQuote, setSalesQuote] = useState([]);
+	const navigate = useNavigate();
+	//const projects = useSelector((state) => state.projects.projects);
+	const projects = localStorage.getItem('projects') ? JSON.parse(localStorage.getItem('projects')) : [];
+	const [salesQuoteList, setSalesQuoteList] = useState([]);
+	const [selectedSalesQuote, setSelectedSalesQuote] = useState([]);
 	const [rootSalesQuote, setRootSalesQuote] = useState([]);
-	const [loading, setLoading] = useState(true);
+	const [loading, setLoading] = useState(false);
 	const [isAll, setIsAll] = useState(false);
 	const [fromDate, setFromDate] = useState();
 	const [toDate, setToDate] = useState();
+	const [api, contextHolder] = notification.useNotification();
+	const openNotificationWithIcon = (type, message, description) => {
+		api[type]({
+			message: message,
+			description: description
+		});
+	};
+	const handle = async (internalIDs) => {
+		try {
+			setLoading(true);
+			const response = await axios.post('http://localhost:5000/api/getMaterialsByInternalIDs', { InternalIDs: internalIDs });
 
+		} catch (error) {
+			console.error('Error fetching data:', error);
+		} finally {
+			setLoading(false);
+		}
+	}
+	const contextMenuItems = [{
+		label: (
+			<a href="#">Create Purchase Contract</a>
+		),
+		key: '0',
+		onClick: () => {
+		}
+	},
+	{
+		label: (
+			<Link to={"/SalesQuoteList/CreateSalesOrder"} state={selectedSalesQuote}>Create Sales Order</Link>
+		),
+		key: '1',
+		onClick: async () => {
+			if (selectedSalesQuote.SalesOrderID !== "") {
+				openNotificationWithIcon('error', 'Error', 'SQ này đã có SO vui lòng kiểm tra lại SO');
+				return;
+			};
+			try {
+				setLoading(true);
+
+			} catch (error) {
+				openNotificationWithIcon('error', 'Error', error.message);
+				console.error('Error fetching Sales Quote:', error);
+			} finally {
+				setLoading(false);
+			}
+		}
+	}];
+	const salesQuoteColumns = [
+		{
+			title: '', dataIndex: '0', render: (text, record) =>
+				<Dropdown
+					onOpenChange={(open) => {
+						if (open) {
+							setSelectedSalesQuote(record);
+							//const internalIDs = [...new Set(record.CustomerQuoteItem.map(item => item.ProductID))];
+							//const filterInternalIDs = internalIDs.filter(item => item[0] != '2');
+							//handle(filterInternalIDs);
+						}
+					}}
+					menu={{ items: contextMenuItems }}
+					trigger={['click']}>
+					<EllipsisOutlined />
+				</Dropdown>
+		},
+		{ title: 'Dự Án', dataIndex: 'ProjectID' },
+		{ title: 'SQ ID', dataIndex: 'SalesQuoteID' },
+		{ title: 'SO ID', dataIndex: 'SalesOrderID' },
+		{ title: 'Contract ID', dataIndex: 'ContractID' },
+		{ title: 'Tên', dataIndex: 'SalesQuoteName' },
+		{ title: 'Trạng Thái', dataIndex: 'LifeCycleStatusCodeText' },
+		{ title: 'Sales Unit', dataIndex: 'SalesUnitID' },
+		{ title: 'Employee', dataIndex: 'EmployeeResponsibleName' },
+		{ title: 'Start Date', dataIndex: 'RequestedStartDate' },
+		{ title: 'End Date', dataIndex: 'RequestedEndDate' },
+		{ title: 'Create Date', dataIndex: 'CreationDateTime' },
+	];
 	// Loading top 100 Sales Quote when page loads
 	useEffect(() => {
-		axios
-			.get(`http://localhost:5000/api/getAllSalesQuoteHeader?top=true`)
-			.then((response) => {
-				if (response?.data?.d?.results && projects.length > 0) {
-					loadDataToTable(response.data.d.results);
+		const fetchSalesQuote = async () => {
+			try {
+				if (projects.length === 0) {
+					openNotificationWithIcon('error', 'Missing data', "Projects is missing, please check again");
+					return;
+				}
+				setLoading(true);
+				const response = await axios.get('http://localhost:5000/api/getAllSalesQuoteHeader?top=true');
+				if (response?.data?.d?.results) {
+					setSalesQuoteList(parseApiData(response.data.d.results));
 					const rootSalesQuote = parseApiData(response.data.d.results);
 					setRootSalesQuote(rootSalesQuote);
+					setLoading(false);
 				}
-			})
-			.catch((error) => console.error("Error fetching data:", error));
-	}, [projects]);
+			} catch (error) {
+				openNotificationWithIcon('error', 'Error', error.message);
+				console.error('Error fetching Sales Quote:', error);
+				setLoading(false);
+			}
+		}
+		fetchSalesQuote();
+	}, []);
 	const handleChangeFromDate = (date, dateString) => {
 
 		if (dateString !== '') {
@@ -110,12 +165,10 @@ const SalesQuoteList = () => {
 	// Parsing raw data to neccessary data
 	const parseApiData = (data) => {
 		let projectID = "";
-		let salesOrderID = "";
-		let contractID = "";
 		const parseApiData = data.map((item) => {
 			const objectID = item.ObjectID;
-			salesOrderID = "";
-			contractID = "";
+			let salesOrderID = "";
+			let contractID = "";
 			if (item.CustomerQuoteItem.length > 0) {
 				const ProjectTaskUUID = item.CustomerQuoteItem[0]?.ProjectTaskUUID;
 				if (ProjectTaskUUID) {
@@ -127,8 +180,8 @@ const SalesQuoteList = () => {
 				salesOrderID = item.CustomerQuoteItem[0]?.SO_ID_KUT;
 				const uniqueSet = new Set();
 				item.CustomerQuoteItem.forEach(x => {
-					if (x.ParentObjectID === objectID){
-						if (x.ContractID1_KUT && !uniqueSet.has(x.ContractID1_KUT)){
+					if (x.ParentObjectID === objectID) {
+						if (x.ContractID1_KUT && !uniqueSet.has(x.ContractID1_KUT)) {
 							uniqueSet.add(x.ContractID1_KUT);
 							contractID += `${x.ContractID1_KUT},`
 						}
@@ -139,10 +192,12 @@ const SalesQuoteList = () => {
 				key: item.SalesQuoteID,
 				ObjectID: item.ObjectID,
 				ProjectID: projectID,
+				CustomerID: item.CustomerID,
 				SalesQuoteID: item.SalesQuoteID,
 				SalesOrderID: salesOrderID,
 				ContractID: contractID,
 				SalesQuoteName: item.SalesQuoteName,
+				CustomerQuoteItem: item.CustomerQuoteItem,
 				LifeCycleStatusCodeText: item.LifeCycleStatusCodeText,
 				SalesUnitID: item.SalesUnitID,
 				EmployeeResponsibleName: item.EmployeeResponsibleName,
@@ -153,77 +208,73 @@ const SalesQuoteList = () => {
 		});
 		return parseApiData;
 	}
-	const loadDataToTable = (data) => {
-		setLoading(true);
-		const salesQuote = parseApiData(data);
-		setSalesQuote(salesQuote);
-		setLoading(false);
-	}
 	// Loading top 100 Sales Quote
 	const resetTable = () => {
-		setLoading(true);
-		axios
-			.get(`http://localhost:5000/api/getAllSalesQuoteHeader?top=true`)
-			.then((response) => {
-				if (response?.data?.d?.results) {
-					loadDataToTable(response.data.d.results);
-					const rootSalesQuote = parseApiData(response.data.d.results);
-					setRootSalesQuote(rootSalesQuote);
-					setIsAll(false);
-				}
-			})
-			.catch((error) => {
+		try {
+			if (projects.length === 0) {
+				openNotificationWithIcon('error', 'Missing data', "Projects is missing, please check again");
+				return;
+			}
+			setLoading(true);
+			const response = axios.get(`http://localhost:5000/api/getAllSalesQuoteHeader?top=true`);
+			if (response?.data?.d?.results) {
+				setSalesQuoteList(parseApiData(response.data.d.results));
+				const rootSalesQuote = parseApiData(response.data.d.results);
+				setRootSalesQuote(rootSalesQuote);
 				setLoading(false);
-				console.error("Error fetching data:", error)
-			});
+			}
+		} catch (error) {
+			openNotificationWithIcon('error', 'Error fetching data', error.message);
+			setLoading(false);
+		}
 	}
 	// Searching Sales Quote by SQ ID
 	const onSearch = (value) => {
 		if (value) {
-			setLoading(true);
-			axios
-				.post(`http://localhost:5000/api/getSalesQuoteHeaderBySQID`, { sqid: value })
-				.then(
-					(response) => {
-						if (response?.data?.d?.results) {
-							loadDataToTable(response.data.d.results);
-							setIsAll(false);
-						}
-					}
-				)
-				.catch((error) => {
-					setLoading(false);
-					console.error("Error fetching data:", error)
-				});
+			try {
+				setLoading(true);
+				const response = axios.post(`http://localhost:5000/api/getSalesQuoteHeaderBySQID`, { sqid: value });
+				if (response?.data?.d?.results) {
+					setSalesQuoteList(parseApiData(response.data.d.results));
+					setIsAll(false);
+				}
+			} catch (error) {
+				openNotificationWithIcon('error', 'Error fetching data', error);
+			} finally {
+				setLoading(false);
+			}
 		}
 	}
-	// Loading top 5000 Sales Quote
-	const getAll = () => {
-		setLoading(true);
-		axios
-			.get(`http://localhost:5000/api/getAllSalesQuoteHeader`)
-			.then((response) => {
-				if (response?.data?.d?.results && projects.length > 0) {
-					loadDataToTable(response.data.d.results);
-					const rootSalesQuote = parseApiData(response.data.d.results);
-					setRootSalesQuote(rootSalesQuote);
-					setIsAll(true);
-					setLoading(false);
-				}
-			})
-			.catch((error) => {
+	// Loading top 10000 Sales Quote
+	const getAll = async () => {
+		try {
+			if (projects.length === 0) {
+				openNotificationWithIcon('error', 'Missing data', "Projects is missing, please check again");
+				return;
+			}
+			setLoading(true);
+			const response = await axios.get(`http://localhost:5000/api/getAllSalesQuoteHeader`);
+			if (response?.data?.d?.results) {
+				setSalesQuoteList(parseApiData(response.data.d.results));
+				setRootSalesQuote(salesQuoteList);
+				setIsAll(true);
 				setLoading(false);
-				console.error("Error fetching data:", error)
-			});
+			}
+			console.log(response);
+			
+		} catch (error) {
+			openNotificationWithIcon('error', 'Error fetching data', error);
+			setLoading(false);
+		}
 	}
 	// Filter by status
 	const handleFilterByStatus = (value) => {
 		setLoading(true);
 		if (value) {
 			const filtedSalesQuoteArray = rootSalesQuote.filter(item => item.LifeCycleStatusCodeText === value);
-			setSalesQuote(filtedSalesQuoteArray);
+			setSalesQuoteList(filtedSalesQuoteArray);
 		} else {
-			setSalesQuote(rootSalesQuote);
+			setSalesQuoteList(rootSalesQuote);
 		}
 		setLoading(false);
 	}
@@ -233,9 +284,9 @@ const SalesQuoteList = () => {
 		if (fromDate !== '' && toDate !== '') {
 			const filtedSalesQuoteArray = rootSalesQuote.filter(
 				item => (Date.parse(formatDate(item.CreationDateTime)) >= Date.parse(fromDate) && Date.parse(formatDate(item.CreationDateTime)) <= Date.parse(toDate)));
-			setSalesQuote(filtedSalesQuoteArray);
+			setSalesQuoteList(filtedSalesQuoteArray);
 		} else {
-			setSalesQuote(rootSalesQuote);
+			setSalesQuoteList(rootSalesQuote);
 		}
 		setLoading(false);
 	}
@@ -244,15 +295,16 @@ const SalesQuoteList = () => {
 		setLoading(true);
 		if (value) {
 			const filtedSalesQuoteArray = rootSalesQuote.filter(item => item.ProjectID === value);
-			setSalesQuote(filtedSalesQuoteArray);
+			setSalesQuoteList(filtedSalesQuoteArray);
 		} else {
-			setSalesQuote(rootSalesQuote);
+			setSalesQuoteList(rootSalesQuote);
 		}
 		setLoading(false);
 	}
 	return (
 		<>
-		<Spin tip="Loading" size="large" spinning={loading} fullscreen> </Spin>
+			{contextHolder}
+			<Spin tip="Loading" size="large" spinning={loading} fullscreen> </Spin>
 			<Title level={3}>Sales Quote List</Title>
 			<div
 				style={{
@@ -332,7 +384,10 @@ const SalesQuoteList = () => {
 					</Col>
 				</Row>
 				<Row style={{ marginTop: '15px' }}>
-					<Table columns={salesQuoteColumns} dataSource={salesQuote} style={{ width: '100%' }} />
+					<Table
+						columns={salesQuoteColumns}
+						dataSource={salesQuoteList}
+						style={{ width: '100%' }} />
 				</Row>
 			</div>
 		</>
