@@ -25,7 +25,7 @@ import {
 } from 'antd';
 import { formatDate } from '../utils/format';
 import { Link } from 'react-router-dom';
-const { Title } = Typography;
+const { Title,Text } = Typography;
 const { Option } = Select;
 const { Search } = Input;
 
@@ -50,17 +50,6 @@ const SalesQuoteList = () => {
 			description: description
 		});
 	};
-	const handle = async (internalIDs) => {
-		try {
-			setLoading(true);
-			const response = await axios.post('http://localhost:5000/api/getMaterialsByInternalIDs', { InternalIDs: internalIDs });
-
-		} catch (error) {
-			console.error('Error fetching data:', error);
-		} finally {
-			setLoading(false);
-		}
-	}
 	const contextMenuItems = [{
 		label: (
 			<a href="#">Create Purchase Contract</a>
@@ -71,7 +60,7 @@ const SalesQuoteList = () => {
 	},
 	{
 		label: (
-			<Link to={"/SalesQuoteList/CreateSalesOrder"} state={selectedSalesQuote}>Create Sales Order</Link>
+			<Text>Create Sales Order</Text>
 		),
 		key: '1',
 		onClick: async () => {
@@ -79,15 +68,7 @@ const SalesQuoteList = () => {
 				openNotificationWithIcon('error', 'Error', 'SQ này đã có SO vui lòng kiểm tra lại SO');
 				return;
 			};
-			try {
-				setLoading(true);
-
-			} catch (error) {
-				openNotificationWithIcon('error', 'Error', error.message);
-				console.error('Error fetching Sales Quote:', error);
-			} finally {
-				setLoading(false);
-			}
+			navigate('/SalesQuoteList/CreateSalesOrder',{state: selectedSalesQuote});
 		}
 	}];
 	const salesQuoteColumns = [
@@ -97,9 +78,6 @@ const SalesQuoteList = () => {
 					onOpenChange={(open) => {
 						if (open) {
 							setSelectedSalesQuote(record);
-							//const internalIDs = [...new Set(record.CustomerQuoteItem.map(item => item.ProductID))];
-							//const filterInternalIDs = internalIDs.filter(item => item[0] != '2');
-							//handle(filterInternalIDs);
 						}
 					}}
 					menu={{ items: contextMenuItems }}
@@ -162,7 +140,7 @@ const SalesQuoteList = () => {
 		}
 
 	}
-	// Parsing raw data to neccessary data
+	// Parsing raw data to necessary data
 	const parseApiData = (data) => {
 		let projectID = "";
 		const parseApiData = data.map((item) => {
@@ -271,8 +249,8 @@ const SalesQuoteList = () => {
 	const handleFilterByStatus = (value) => {
 		setLoading(true);
 		if (value) {
-			const filtedSalesQuoteArray = rootSalesQuote.filter(item => item.LifeCycleStatusCodeText === value);
-			setSalesQuoteList(filtedSalesQuoteArray);
+			const filteredSalesQuoteArray = rootSalesQuote.filter(item => item.LifeCycleStatusCodeText === value);
+			setSalesQuoteList(filteredSalesQuoteArray);
 		} else {
 			setSalesQuoteList(rootSalesQuote);
 		}
@@ -282,9 +260,9 @@ const SalesQuoteList = () => {
 	const handleFilterByDate = () => {
 		setLoading(true);
 		if (fromDate !== '' && toDate !== '') {
-			const filtedSalesQuoteArray = rootSalesQuote.filter(
+			const filteredSalesQuoteArray = rootSalesQuote.filter(
 				item => (Date.parse(formatDate(item.CreationDateTime)) >= Date.parse(fromDate) && Date.parse(formatDate(item.CreationDateTime)) <= Date.parse(toDate)));
-			setSalesQuoteList(filtedSalesQuoteArray);
+			setSalesQuoteList(filteredSalesQuoteArray);
 		} else {
 			setSalesQuoteList(rootSalesQuote);
 		}
@@ -294,8 +272,8 @@ const SalesQuoteList = () => {
 	const handleFilterByProject = (value) => {
 		setLoading(true);
 		if (value) {
-			const filtedSalesQuoteArray = rootSalesQuote.filter(item => item.ProjectID === value);
-			setSalesQuoteList(filtedSalesQuoteArray);
+			const filteredSalesQuoteArray = rootSalesQuote.filter(item => item.ProjectID === value);
+			setSalesQuoteList(filteredSalesQuoteArray);
 		} else {
 			setSalesQuoteList(rootSalesQuote);
 		}
@@ -304,7 +282,7 @@ const SalesQuoteList = () => {
 	return (
 		<>
 			{contextHolder}
-			<Spin tip="Loading" size="large" spinning={loading} fullscreen> </Spin>
+			<Spin style={{zIndex:'1000'}} tip="Loading" size="large" spinning={loading} fullscreen> </Spin>
 			<Title level={3}>Sales Quote List</Title>
 			<div
 				style={{

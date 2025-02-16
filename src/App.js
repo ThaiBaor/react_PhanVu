@@ -4,6 +4,7 @@ import {
 	UserOutlined
 } from '@ant-design/icons';
 import {
+	Button,
 	Layout,
 	Menu,
 	theme,
@@ -91,7 +92,7 @@ const App = () => {
 				<Menu theme="dark" defaultSelectedKeys={['1']} mode="inline" items={items} />
 			</Sider>
 			<Layout>
-				<Header style={{ padding: 0, background: colorBgContainer }} />
+				<Header style={{ padding: 0, background: colorBgContainer }} ></Header>
 				<Content style={{ margin: '0 16px' }}>
 					<Routes>
 						<Route path='/' element={<Home />} />
